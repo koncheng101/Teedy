@@ -33,7 +33,7 @@ jobs:
       # 4. Maven 构建 (核心修改点)
       - name: Build with Maven
         run: |
-          mvn -B clean package javadoc:javadoc \
+          run: mvn -B package --file pom.xml javadoc:aggregate \
             -DskipTests=false \
             -Dmaven.test.failure.ignore=true \
             -Dmaven.javadoc.failOnError=false
