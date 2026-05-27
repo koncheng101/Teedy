@@ -1,71 +1,64 @@
 pipeline {
     agent any
-
+    
+    // 指定构建所需的工具（别名必须与 Jenkins 全局工具配置中的名称完全一致）
     tools {
-        jdk 'jdk11' // 对应你配置的JDK别名
-        maven 'maven3' // 对应你配置的Maven别名
+        jdk 'jdk21'   // 对应你的 JDK 21 环境
+        maven 'maven3' // 确保你在 Jenkins 里也配置了名为 maven3 的 Maven
     }
 
     stages {
-        stage('Checkout') {
+        stage('Checkout SCM') {
             steps {
+                // 拉取 GitHub 仓库的代码
                 checkout scm
-                sh 'git status'
             }
         }
 
-        stage('Maven Build') {
+        stage('Maven Build & PMD Check') {
             steps {
-                // 清理并构建，跳过测试（实验环境常见做法）
-                sh 'mvn clean install -DskipTests'
+                // 执行清理、编译，并运行 PMD 静态代码检查
+                sh 'mvn clean compile pmd:pmd'
             }
         }
 
-        stage('PMD Code Analysis') {
+        stage('Run Unit Tests') {
             steps {
-                // 使用Maven PMD插件进行代码检查
-                sh 'mvn pmd:pmd'
-            }
-        }
-
-        stage('Run Tests') {
-            steps {
-                // 运行单元测试
+                // 执行单元测试
                 sh 'mvn test'
             }
-            post {
-                always {
-                    // 收集测试结果
-                    junit '**/target/surefire-reports/*.xml'
-                }
-            }
         }
 
-        stage('Generate JavaDoc') {
+        stage('Generate JavaDoc & Package') {
             steps {
-                // 生成Java文档
-                sh 'mvn javadoc:javadoc'
-            }
-        }
-
-        stage('Archive Artifacts') {
-            steps {
-                // 归档构建产物
-                archiveArtifacts artifacts: 'docs-web/target/*.war', fingerprint: true
-                archiveArtifacts artifacts: 'docs-core/target/*.jar', fingerprint: true
-                // 归档报告
-                archiveArtifacts artifacts: '**/target/site/javadoc/**', fingerprint: true, allowEmptyArchive: true
-                archiveArtifacts artifacts: '**/target/pmd.xml', fingerprint: true, allowEmptyArchive: true
+                // 生成 JavaDoc 文档，并进行打包 (生成 jar/war)
+                sh 'mvn javadoc:javadoc package -DskipTests'
             }
         }
     }
 
+    // 构建后的处理动作
     post {
         success {
-            echo '🎉 构建成功！流水线执行完毕。'
+            echo '✅ 流水线执行成功！正在归档构建产物...'
+            // 归档可执行的 jar/war 包
+            archiveArtifacts artifacts: '**/target/*.jar, **/target/*.war', fingerprint: true
+            
+            // 归档 HTML 格式的测试报告
+            archiveArtifacts artifacts: '**/target/surefire-reports/*.html', allowEmptyArchive: true
+            
+            // 归档生成的 JavaDoc 文档
+            archiveArtifacts artifacts: '**/target/site/apidocs/**', allowEmptyArchive: true
+            
+            // 让 Jenkins 原生解析并展示 XML 格式的测试结果趋势图
+            junit '**/target/surefire-reports/*.xml'
         }
         failure {
-            echo ' 构建失败！请检查日志。'
+            echo '❌ 流水线执行失败！请查看控制台输出排查错误。'
+        }
+        always {
+            // 无论成功或失败，最后都清理工作空间，释放磁盘空间
+            cleanWs()
         }
     }
 }
