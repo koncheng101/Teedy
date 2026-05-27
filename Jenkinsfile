@@ -44,7 +44,7 @@ pipeline {
             junit '**/target/surefire-reports/*.xml'
         }
         failure {
-            echo '❌ 流水线执行失败！但工作空间已保留，请登录服务器查看 C:\ProgramData\Jenkins\.jenkins\workspace\... 目录下的 target/surefire-reports 获取详细错误。'
+            echo '❌ 流水线执行失败！但工作空间已保留，请登录服务器查看 C:\\ProgramData\\Jenkins\\.jenkins\\workspace\\... 目录下的 target/surefire-reports 获取详细错误。'
         }
         always {
             // 【修改】注释掉 cleanWs()，保留失败后的文件用于调试
