@@ -47,23 +47,18 @@ pipeline {
         }
     }
 
-    post {
-        always {
-            echo 'ℹ️ 构建结束，正在收集结果...'
-            // 收集 JAR 包
-            archiveArtifacts artifacts: '**/target/*.jar', fingerprint: true
-
-            // 【关键修复】修正测试报告的路径，必须包含 /target/
-            junit testResults: '**/target/surefire-reports/*.xml', allowEmptyArchive: true
-
-            // 如果你想看 HTML 格式的测试报告，也可以归档 HTML 目录
-            // archiveArtifacts artifacts: '**/target/site/', allowEmptyArchive: true
-        }
+        post {
         success {
-            echo '✅ 流水线执行成功！(注意检查测试报告中是否有被忽略的错误)'
+            echo '✅ 流水线执行成功！'
+            // 修复归档路径，使用 ** 递归查找
+            archiveArtifacts artifacts: '**/target/*.jar', fingerprint: true
+            // 修改点：将 allowEmptyArchive 改为 allowEmptyResults
+            junit testResults: '**/target/surefire-reports/*.xml', allowEmptyResults: true
         }
         failure {
-            echo '❌ 流水线执行失败！(可能是编译错误或脚本语法错误)'
+            echo '❌ 流水线执行失败！'
+        }
+        always {
+            echo 'ℹ️ 构建结束。'
         }
     }
-}
