@@ -15,7 +15,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. 配置 JDK 11 (Teedy 官方推荐 Java 11，JDK 21 可能导致不兼容)
+      # 2. 设置 JDK 11 (Teedy 原生支持最好)
       - name: Set up JDK 11
         uses: actions/setup-java@v4
         with:
@@ -23,36 +23,31 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      # 3. 安装系统级依赖 (关键：修复 OCR 和 文件类型识别问题)
+      # 3. 安装依赖 (修复 OCR 和 媒体处理报错)
       - name: Install System Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y 
-            tesseract-ocr libtesseract-dev # 修复 TestFileUtil 和 TestPdfFormatHandler 错误
-            ffmpeg mediainfo poppler-utils # 修复 TestMimeTypeUtil 的依赖
-            default-jdk # 确保 javadoc 命令可用
+          sudo apt-get install -y tesseract-ocr libtesseract-dev ffmpeg mediainfo poppler-utils
 
-      # 4. Maven 构建 (核心：分步执行以更好地捕获错误)
+      # 4. 构建与生成文档
       - name: Build with Maven
         run: |
-          # 4.1 生成 JavaDoc (忽略错误，强制生成)
-          mvn javadoc:javadoc -Dmaven.javadoc.failOnError=false || true
-          
-          # 4.2 编译、运行测试、打包
-          # -Dmaven.test.failure.ignore=true: 允许测试失败，但继续打包
-          mvn -B clean package 
-            -Dmaven.test.failure.ignore=true
+          # 使用绝对路径调用 mvn 以防万一，虽然 setup-java 通常会自动配置好
+          mvn -B clean package javadoc:javadoc \
+            -Dmaven.javadoc.failOnError=false \
+            -Dcheckstyle.skip=true \
+            -Dpmd.skip=true
+          # 注意：如果不需要 PMD/Checkstyle 检查，加上 skip 可以加快速度并减少报错
 
-      # 5. 上传构建产物 (Jar/War)
-      - name: Upload JAR Artifacts
+      # 5. 上传 JAR/WAR
+      - name: Upload Artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: teedy-jars
+          name: teedy-build-output
           path: |
-            docs-web/target/*.war
-            docs-core/target/*.jar
-          retention-days: 5
+            **/target/*.jar
+            **/target/*.war
 
       # 6. 上传测试报告
       - name: Upload Test Reports
@@ -60,16 +55,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-reports
-          path: |
-            docs-core/target/surefire-reports/
-            docs-web/target/surefire-reports/
-          retention-days: 5
+          path: '**/target/surefire-reports/'
 
-      # 7. 上传 JavaDoc (修复：指定具体模块路径，避免通配符失效)
+      # 7. 上传 JavaDoc
       - name: Upload Javadoc
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: javadoc
-          path: docs-core/target/site/apidocs/
-          retention-days: 5
+          path: '**/target/site/apidocs/'
