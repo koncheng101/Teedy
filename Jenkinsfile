@@ -35,20 +35,26 @@ pipeline {
         }
     }
 
-    post {
-        success {
-            echo '✅ 流水线执行成功！正在归档构建产物...'
-            archiveArtifacts artifacts: '**/target/*.jar, **/target/*.war', fingerprint: true
-            archiveArtifacts artifacts: '**/target/surefire-reports/*.html', allowEmptyArchive: true
-            archiveArtifacts artifacts: '**/target/site/apidocs/**', allowEmptyArchive: true
-            junit '**/target/surefire-reports/*.xml'
-        }
-        failure {
-            echo '❌ 流水线执行失败！但工作空间已保留，请登录服务器查看 C:\\ProgramData\\Jenkins\\.jenkins\\workspace\\... 目录下的 target/surefire-reports 获取详细错误。'
-        }
-        always {
-            // 【修改】注释掉 cleanWs()，保留失败后的文件用于调试
-            // cleanWs()
+post {
+    success {
+        echo '✅ 流水线执行成功！正在归档构建产物...'
+        // 归档 jar/war 包
+        archiveArtifacts artifacts: '**/target/*.jar, **/target/*.war', fingerprint: true
+        // 归档 HTML 格式的测试报告
+        archiveArtifacts artifacts: '**/target/surefire-reports/*.html', allowEmptyArchive: true
+        // 归档生成的 JavaDoc 文档
+        archiveArtifacts artifacts: '**/target/site/apidocs/**', allowEmptyArchive: true
+        // 解析并展示 XML 格式的测试结果趋势图
+        junit '**/target/surefire-reports/*.xml'
+    }
+    failure {
+        echo '❌ 流水线执行失败！请查看控制台输出排查错误。'
+    }
+    always {
+        // 【关键修复】加上 steps，并确保 cleanWs 有缩进
+        steps {
+            // 无论成功或失败，最后都清理工作空间
+            cleanWs()
         }
     }
 }
