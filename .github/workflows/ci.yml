@@ -23,22 +23,21 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      # 3. 【重要】安装系统级依赖 (修复测试失败的关键)
+      # 3. 【重点修改】安装系统级依赖
       - name: Install System Dependencies
         run: |
           sudo apt-get update
-          # 安装 OCR, PDF处理, 视频处理, 图片处理依赖
+          # 补全了 PDF 和图片处理所需的库
           sudo apt-get install -y \
             tesseract-ocr libtesseract-dev \
-            poppler-utils \
             ffmpeg mediainfo \
+            poppler-utils \
             imagemagick
 
-      # 4. Maven 构建 + 生成 JavaDoc
-      - name: Build and Generate Javadoc
+      # 4. Maven 构建 & 生成 JavaDoc
+      - name: Build with Maven
         run: |
-          # aggregate 会将多模块文档合并，适合 Teedy 这种结构
-          mvn -B clean package javadoc:aggregate \
+          mvn -B clean package javadoc:javadoc \
             -DskipTests=false \
             -Dmaven.test.failure.ignore=true \
             -Dmaven.javadoc.failOnError=false
@@ -70,6 +69,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: javadoc-html
-          path: target/site/apidocs/
+          name: javadoc
+          path: '**/target/site/apidocs/'
           retention-days: 5
